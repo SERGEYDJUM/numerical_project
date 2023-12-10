@@ -2,7 +2,7 @@ from numpy.typing import NDArray
 from numpy.linalg import norm
 import numpy as np
 
-from utils import validate_matrix, lu_decomposition, lu_solve, partial_pivot_matrix
+from utils import validate_matrix, gauss_jordan
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]
@@ -60,26 +60,22 @@ def closest_eigen_pair(
     """
 
     validate_matrix(A)
-    A = abs(approx_eigen) * np.identity(A.shape[0]) - A  # Check for zeros on diag
 
-    X = np.ones(A.shape[0])
-    X_old, X = X, X / norm(X)
+    n = A.shape[0]
+    X = np.ones(n)
+    X /= norm(X)
+    Identity = np.eye(n)
 
-    P = partial_pivot_matrix(A)
-    LU = lu_decomposition(A, P)
-
-    lam_old, lam = 1, 2
+    lam, old_lam = approx_eigen, 0
     for _ in range(max_iter):
-        X, X_old = lu_solve(LU, P, X), X
+        X = gauss_jordan(lam * Identity - A, X)
         X /= norm(X)
 
-        max_idx = np.argmax(np.abs(X))
-        lam_old, lam = lam, X[max_idx] / X_old[max_idx]
-
-        if abs(lam_old - lam) < eps:
+        old_lam, lam = lam, X @ A @ X
+        if abs(old_lam - lam) < eps:
             break
 
-    return (lam, X)  # TODO: Fix sign
+    return lam, X
 
 
 def min_eigen_pair(
@@ -98,7 +94,7 @@ def min_eigen_pair(
         (float, NDArray): Собственное значение и вектор.
     """
 
-    return closest_eigen_pair(A, max_iter=max_iter, eps=eps)
+    return closest_eigen_pair(A, 0, max_iter, eps)
 
 
 def eigen_pairs(A: Matrix, max_iter: int = 512, eps: float = 1e-9) -> (Vector, Matrix):
@@ -114,6 +110,7 @@ def eigen_pairs(A: Matrix, max_iter: int = 512, eps: float = 1e-9) -> (Vector, M
     Returns:
         (NDArray, NDArray): Массив собственных значений и матрица с собственными векторами по рядам.
     """
+
     validate_matrix(A)
     n = A.shape[0]
     H_res = np.identity(n)
