@@ -34,13 +34,13 @@ def max_eigen_pair(
         X_old, X = X, A @ X
 
         max_idx = np.argmax(np.abs(X_old))
-        lam_old, lam = lam, abs(X[max_idx] / X_old[max_idx])
+        lam_old, lam = lam, X[max_idx] / X_old[max_idx]
 
         X /= norm(X)
         if abs(lam_old - lam) < eps:
             break
 
-    return (lam, X)  # TODO: Polarity
+    return (lam, X)
 
 
 def closest_eigen_pair(
@@ -74,12 +74,12 @@ def closest_eigen_pair(
         X /= norm(X)
 
         max_idx = np.argmax(np.abs(X))
-        lam_old, lam = lam, abs(X_old[max_idx] / X[max_idx])
+        lam_old, lam = lam, X[max_idx] / X_old[max_idx]
 
         if abs(lam_old - lam) < eps:
             break
 
-    return (lam, -X)  # TODO: Polarity
+    return (lam, X)  # TODO: Fix sign
 
 
 def min_eigen_pair(
