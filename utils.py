@@ -6,7 +6,7 @@ Vector = NDArray[np.float_]
 
 GLOBAL_EPS = 1e-9
 
-def determinant(A: Matrix, eps: float = 1e-9) -> float:
+def determinant(A: Matrix) -> float:
     """Вычисляет определитель наибольшего минора матрицы (самой матрицы).
 
     Примечание: 
