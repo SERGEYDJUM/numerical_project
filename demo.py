@@ -1,4 +1,4 @@
-from eigenfind import min_eigen_pair, max_eigen_pair
+from eigenfind import min_eigen_pair, max_eigen_pair, eigen_pairs
 import numpy as np
 from numpy.linalg import norm
 # import scipy.linalg as spl
@@ -19,17 +19,28 @@ true_val_vec = list(sorted(zip(npvals, npvecs), key=lambda x: abs(x[0])))
 
 print("Eigenvalues and eigenvectors calculated by numpy.linalg.eig:")
 for val, vec in true_val_vec:
-    print(f"\t {val}: {vec}")
+    print_round(val, vec)
 print()
 
 print("[Метод простых итераций] Наибольшее по модулю собственное значение и соотвествующий вектор: ")
 val, vec = max_eigen_pair(A)
 print_round(val, vec)
-print(f"\tErrors: {abs(val - true_val_vec[-1][0])}, {norm(vec - true_val_vec[-1][1])}")
+print(f"\tErrors: {norm(val - true_val_vec[-1][0])}, {norm(vec - true_val_vec[-1][1])}")
 print()
 
 print("[Метод обратных простых итераций] Наименьшее по модулю собственное значение и соотвествующий вектор: ")
 val, vec = min_eigen_pair(A)
 print_round(val, vec)
-print(f"\tErrors: {abs(val - true_val_vec[0][0])}, {norm(vec - true_val_vec[0][1])}")
+print(f"\tErrors: {norm(val - true_val_vec[0][0])}, {norm(vec - true_val_vec[0][1])}")
+print()
+
+print("[Метод вращений] Собственные значения и соотвествующие векторы: ")
+vals, vecs = eigen_pairs(A)
+val_errors, vec_errors = [], []
+for i, data in enumerate(sorted(zip(vals, vecs), key=lambda x: x[0])):
+    val, vec = data
+    val_errors.append(norm(val - true_val_vec[i][0]))
+    vec_errors.append(norm(vec - true_val_vec[i][1]))
+    print_round(val, vec)
+print(f"\tAverage errors: {np.average(val_errors)}, {np.average(vec_errors)}")
 print()
