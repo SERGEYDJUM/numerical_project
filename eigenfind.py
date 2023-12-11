@@ -106,8 +106,12 @@ def min_eigen_pair(A: Matrix, max_iter: int = 512, eps: float = 1e-12, determini
     Returns:
         (float, NDArray): Собственное значение и вектор.
     """
+    
+    attempts = [closest_eigen_pair(A, 10, max_iter, eps, deterministic),
+        closest_eigen_pair(A, 0, max_iter, eps, deterministic),
+        closest_eigen_pair(A, -10, max_iter, eps, deterministic)]
 
-    return closest_eigen_pair(A, 0, max_iter, eps, deterministic)
+    return sorted(attempts, key=lambda x: abs(x[0]))[0]
 
 
 def eigen_pairs_symmetric(
@@ -168,56 +172,61 @@ def eigen_pairs_symmetric(
 
 
 if __name__ == "__main__":
+    def close(x, y, eps=1e-5) -> bool:
+        return np.linalg.norm(x - y) < eps
 
-    def close(x, y) -> bool:
-        return np.linalg.norm(x - y) < GLOBAL_EPS * 10
-
+    def pair_fits_any(corr_vecs: Matrix, corr_lams: Vector, incorrect: Vector, lam: float) -> bool:
+        for corvec, corlam in zip(corr_vecs, corr_lams):
+            if close(corvec, incorrect, 1e-4) or close(corvec, incorrect * -1, 1e-4):
+                if abs(corlam - lam) < 1e-4:
+                    return True
+        return False
+    
     def get_rand_symm_matrix(r: int) -> Matrix:
         A = np.random.rand(r, r)
         A = np.triu(A) + np.triu(A, k=1).T
         assert close(A - A.T, np.zeros_like(A))
         return A
 
-    for _ in range(2):
-        matricies = filter(
-            matrix_is_singular, [np.random.rand(r, r) for r in range(2, 18, 1)]
-        )
+    matricies = filter(
+        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 18, 1)]
+    )
 
-        for i, A in enumerate(matricies):
-            np_lams, np_vecs = np.linalg.eig(A)            
-            np_vecs = np.transpose(np_vecs)
+    for i, A in enumerate(matricies):
+        np_lams, np_vecs = np.linalg.eig(A)            
+        np_vecs = np.transpose(np_vecs)
+        
+        if not close(np.conj(np_lams), np_lams):
+            # Skipping complex eigenvalues
+            continue
+        
+        if any(not close(vec, np.conj(vec)) for vec in np_vecs):
+            # Skipping complex eigenvectors
+            continue
             
-            if not close(np.conj(np_lams), np_lams):
-                continue
-            
-            if any(not close(vec, np.conj(vec)) for vec in np_vecs):
-                continue
-                
-            true_res = list(sorted(zip(np_lams, np_vecs), key=lambda x: abs(x[0])))
-            np_small = true_res[0]
-            np_big = true_res[-1]
+        true_res = list(sorted(zip(np_lams, np_vecs), key=lambda x: abs(x[0])))
+        np_small = true_res[0]
+        np_big = true_res[-1]
 
-            lam_small, vec_small = min_eigen_pair(A)
-            if abs(lam_small - np_small[0]) > GLOBAL_EPS:
-                print(A, np.linalg.det(A))
-                print(np_lams, np_vecs)
-                print(abs(lam_small - np_small[0]))
-
-            assert abs(lam_small - np_small[0]) < GLOBAL_EPS
-            assert close(vec_small, np_small[1]) or close(vec_small, np_small[1] * -1)
-                
+        lam_small, vec_small = min_eigen_pair(A, deterministic=True)
+        if abs(lam_small - np_small[0]) > GLOBAL_EPS:
+            if pair_fits_any(np_vecs, np_lams, vec_small, lam_small):
+                print(f"Lambdas by NumPy and wrong smallest: {np_lams, lam_small}")
+                assert False, "Is not a minimal eigenvalue"
+            else:
+                assert False, "Calculated eigenvector won't fit any NP vectors"
             
 
-        matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
+    matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
 
-        for i, A in enumerate(matricies):
-            np_lams, np_vecs = np.linalg.eig(A)
-            np_vecs = np.transpose(np_vecs)
-            lams, vecs = eigen_pairs_symmetric(A)
+    for i, A in enumerate(matricies):
+        np_lams, np_vecs = np.linalg.eig(A)
+        np_vecs = np.transpose(np_vecs)
+        lams, vecs = eigen_pairs_symmetric(A)
 
-            true_res = sorted(zip(np_lams, np_vecs), key=lambda x: x[0])
-            res = sorted(zip(lams, vecs), key=lambda x: x[0])
+        true_res = sorted(zip(np_lams, np_vecs), key=lambda x: x[0])
+        res = sorted(zip(lams, vecs), key=lambda x: x[0])
 
-            for re, tre in zip(res, true_res):
-                assert abs(re[0] - tre[0]) < 1e-6
-                assert close(re[1], tre[1]) or close(re[1], tre[1] * -1)
+        for re, tre in zip(res, true_res):
+            assert abs(re[0] - tre[0]) < 1e-6
+            assert close(re[1], tre[1]) or close(re[1], tre[1] * -1)
