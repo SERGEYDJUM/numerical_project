@@ -118,6 +118,7 @@ def gauss_jordan(A: Matrix, Y: Vector) -> Vector:
 
     return AY[:, -1]
 
+#######################################################
 
 if __name__ == "__main__":
 

@@ -1,13 +1,13 @@
 from numpy.typing import NDArray
 from numpy.random import randn
 from numpy.linalg import norm
+from math import isclose
 import numpy as np
 
 from utils import validate_matrix, gauss_jordan, matrix_is_singular
 
 Matrix = NDArray[np.float_]
-Vector = NDArray[np.float_]
-
+Vector = NDArray[np.float_]    
 
 def max_eigen_pair(
     A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False
@@ -97,6 +97,7 @@ def closest_eigen_pair(
 def min_eigen_pair(
     A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False
 ) -> (float, Vector):
+    # TODO: Make so that it actually finds smallest
     """Находит минимальное по модулю собственное значение и \
         соответствующий собственный вектор c помощью метода итераций Рэлея.
 
@@ -119,8 +120,8 @@ def min_eigen_pair(
 def eigen_pairs_symmetric(
     A: Matrix, max_iter: int = 512, eps: float = 1e-12
 ) -> (Vector, Matrix):
-    """Находит все собственные значения симметричной матрицы и соответствующие собственные векторы с \
-        помощью метода поворотов.
+    """Находит все собственные значения матрицы и соответствующие собственные векторы с \
+        помощью метода поворотов. С несимметричными матрицами корректность не гарантирована.
 
     Примечание: из-за повышенных требований к точности, \
         результаты для матриц высокого ранга будут неверными.
@@ -173,6 +174,45 @@ def eigen_pairs_symmetric(
     return np.diag(A), np.transpose(H_res)
 
 
+def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
+    """Находит все собственные значения матрицы 2x2 и соответствующие собственные векторы напрямую.
+    
+    Примечание: поддерживаются только невырожденные матрицы с действительными собственными значениями.
+
+    Args:
+        A (NDArray): Квадратная матрица.
+
+    Returns:
+        (NDArray, NDArray): Массив собственных значений и матрица с собственными векторами по рядам.
+    """
+    if A.shape[0] != 2:
+        raise ValueError("Matrix with incorrect dims was passed")
+    
+    a = A[0, 0]
+    b = A[0, 1]
+    c = A[1, 0]
+    d = A[1, 1]
+    
+    det = a*d - b*c
+    if isclose(det, 0.0):
+        raise ValueError("Non-singular matricies are not supported")
+    
+    dis = (a + d)**2 - 4*det
+    
+    if dis < 0.0:
+        raise ValueError("Complex eigenvalues are not supported")
+    
+    vecs = np.zeros((2, 2))
+    lams = np.zeros(2)
+    for i, sign in enumerate((-1, 1)):
+        lams[i] = (a + d + sign * np.sqrt(dis))/2
+        vecs[i] = np.array([1.0, (a + c - lams[i])/(lams[i] - d - b)])
+        vecs[i] /= norm(vecs[i])
+            
+    return lams, vecs 
+
+####################################################################
+
 if __name__ == "__main__":
 
     def close(x, y, eps=1e-4) -> bool:
@@ -192,6 +232,24 @@ if __name__ == "__main__":
         A = np.triu(A) + np.triu(A, k=1).T
         assert close(A - A.T, np.zeros_like(A))
         return A
+
+
+    matricies = filter(matrix_is_singular, [np.random.rand(2, 2) for _ in range(100)])
+    
+    for i, A in enumerate(matricies):
+        
+        np_lams, np_vecs = np.linalg.eig(A)
+        lams, _ = rank_two_eigen_pairs(A)
+        
+        true_res = sorted(zip(np_lams, np_vecs), key=lambda x: x[0])
+        res = sorted(zip(lams, lams), key=lambda x: x[0])
+        
+        for r, tr in zip(res, true_res):
+            if abs(r[0] - tr[0]) > 1e-5:
+                print(A)
+                print(np_lams, lams)
+                assert False
+
 
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(2, 18, 1)]
