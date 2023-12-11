@@ -1,24 +1,32 @@
 from numpy.typing import NDArray
 from numpy.linalg import norm
+from numpy.random import randn
 import numpy as np
 
-from utils import validate_matrix, gauss_jordan
+from utils import validate_matrix, gauss_jordan, GLOBAL_EPS, matrix_is_singular
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]
 
 
 def max_eigen_pair(
-    A: Matrix, max_iter: int = 512, eps: float = 1e-9
+    A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False
 ) -> (float, Vector):
-    """Находит наибольшее по модулю собственное значение и соответствующий собственный вектор.
-
+    """Находит наибольшее по модулю собственное значение и соответствующий собственный вектор \
+        с помощью метода степенных итераций.
+    
+    Примечание: не для всех матриц данный метод сойдётся к собственному вектору. \
+        Так, для комплексных собственных чисел вектор будет вращаться, а для \
+            кратных - может сойтись к корневому вектору.
+        
     Args:
         A (NDArray): Квадратная матрица.
 
         max_iter (int): Максимальное количество итераций алгоритма.
 
         eps (float): Ограничение по точности, по достижении которй итерации прекращаются.
+        
+        deterministic (bool): Включает заполнение начальных значений единицами, вместо случайных чисел.
 
     Returns:
         (float, NDArray): Собственное значение и вектор.
@@ -26,27 +34,29 @@ def max_eigen_pair(
 
     validate_matrix(A)
     n = A.shape[0]
-    X = np.ones(n)
-    X_old, X = X / norm(X), X
-    lam_old, lam = 0.0, 0.0
-
+    X = np.ones(n) if deterministic else randn(n)
+    X = X / norm(X)
+    lam, lam_new = float("-inf"), float("inf")
     for _ in range(max_iter):
-        X_old, X = X, A @ X
+        X_new = A @ X
+        lam, lam_new = lam_new, (X @ X_new) / (X @ X)
+        X = X_new / norm(X_new)
 
-        max_idx = np.argmax(np.abs(X_old))
-        lam_old, lam = lam, X[max_idx] / X_old[max_idx]
-
-        X /= norm(X)
-        if abs(lam_old - lam) < eps:
+        if abs(lam - lam_new) < eps:
             break
 
-    return (lam, X)
+    return (lam_new, X)
 
 
 def closest_eigen_pair(
-    A: Matrix, approx_eigen: float = 0.0, max_iter: int = 512, eps: float = 1e-9
+    A: Matrix,
+    approx_eigen: float = 0.0,
+    max_iter: int = 512,
+    eps: float = 1e-9,
+    deterministic: bool = False,
 ) -> (float, Vector):
-    """Находит самое близкое к модулю approx_eigen собственное значение и соответствующий собственный вектор.
+    """Находит самое близкое к approx_eigen собственное значение и \
+        соответствующий собственный вектор c помощью метода итераций Рэлея.
 
     Args:
         A (NDArray): Квадратная матрица.
@@ -54,6 +64,8 @@ def closest_eigen_pair(
         max_iter (int): Максимальное количество итераций алгоритма.
 
         eps (float): Ограничение по точности, по достижении которй итерации прекращаются.
+        
+        deterministic (bool): Включает заполнение начальных значений единицами, вместо случайных чисел.
 
     Returns:
         (float, NDArray): Собственное значение и вектор.
@@ -62,13 +74,13 @@ def closest_eigen_pair(
     validate_matrix(A)
 
     n = A.shape[0]
-    X = np.ones(n)
+    X = np.ones(n) if deterministic else randn(n)
     X /= norm(X)
-    Identity = np.eye(n)
+    Eye = np.eye(n)
 
     lam, old_lam = approx_eigen, 0
     for _ in range(max_iter):
-        X = gauss_jordan(lam * Identity - A, X)
+        X = gauss_jordan(lam * Eye - A, X)
         X /= norm(X)
 
         old_lam, lam = lam, X @ A @ X
@@ -78,10 +90,9 @@ def closest_eigen_pair(
     return lam, X
 
 
-def min_eigen_pair(
-    A: Matrix, max_iter: int = 512, eps: float = 1e-9
-) -> (float, Vector):
-    """Находит наименьшее по модулю собственное значение и соответствующий собственный вектор.
+def min_eigen_pair(A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False) -> (float, Vector):
+    """Находит минимальное по модулю собственное значение и \
+        соответствующий собственный вектор c помощью метода итераций Рэлея.
 
     Args:
         A (NDArray): Квадратная матрица.
@@ -89,16 +100,24 @@ def min_eigen_pair(
         max_iter (int): Максимальное количество итераций алгоритма.
 
         eps (float): Ограничение по точности, по достижении которй итерации прекращаются.
+        
+        deterministic (bool): Включает заполнение начальных значений единицами, вместо случайных чисел.
 
     Returns:
         (float, NDArray): Собственное значение и вектор.
     """
 
-    return closest_eigen_pair(A, 0, max_iter, eps)
+    return closest_eigen_pair(A, 0, max_iter, eps, deterministic)
 
 
-def eigen_pairs(A: Matrix, max_iter: int = 512, eps: float = 1e-9) -> (Vector, Matrix):
-    """Находит все собственные значения и соответствующие собственные векторы.
+def eigen_pairs_symmetric(
+    A: Matrix, max_iter: int = 512, eps: float = 1e-12
+) -> (Vector, Matrix):
+    """Находит все собственные значения симметричной матрицы и соответствующие собственные векторы с \
+        помощью метода поворотов.
+
+    Примечание: из-за повышенных требований к точности, \
+        результаты для матриц высокого ранга будут неверными.
 
     Args:
         A (NDArray): Квадратная матрица.
@@ -146,3 +165,59 @@ def eigen_pairs(A: Matrix, max_iter: int = 512, eps: float = 1e-9) -> (Vector, M
         A = np.transpose(H) @ (A @ H)
 
     return np.diag(A), np.transpose(H_res)
+
+
+if __name__ == "__main__":
+
+    def close(x, y) -> bool:
+        return np.linalg.norm(x - y) < GLOBAL_EPS * 10
+
+    def get_rand_symm_matrix(r: int) -> Matrix:
+        A = np.random.rand(r, r)
+        A = np.triu(A) + np.triu(A, k=1).T
+        assert close(A - A.T, np.zeros_like(A))
+        return A
+
+    for _ in range(2):
+        matricies = filter(
+            matrix_is_singular, [np.random.rand(r, r) for r in range(2, 18, 1)]
+        )
+
+        for i, A in enumerate(matricies):
+            np_lams, np_vecs = np.linalg.eig(A)            
+            np_vecs = np.transpose(np_vecs)
+            
+            if not close(np.conj(np_lams), np_lams):
+                continue
+            
+            if any(not close(vec, np.conj(vec)) for vec in np_vecs):
+                continue
+                
+            true_res = list(sorted(zip(np_lams, np_vecs), key=lambda x: abs(x[0])))
+            np_small = true_res[0]
+            np_big = true_res[-1]
+
+            lam_small, vec_small = min_eigen_pair(A)
+            if abs(lam_small - np_small[0]) > GLOBAL_EPS:
+                print(A, np.linalg.det(A))
+                print(np_lams, np_vecs)
+                print(abs(lam_small - np_small[0]))
+
+            assert abs(lam_small - np_small[0]) < GLOBAL_EPS
+            assert close(vec_small, np_small[1]) or close(vec_small, np_small[1] * -1)
+                
+            
+
+        matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
+
+        for i, A in enumerate(matricies):
+            np_lams, np_vecs = np.linalg.eig(A)
+            np_vecs = np.transpose(np_vecs)
+            lams, vecs = eigen_pairs_symmetric(A)
+
+            true_res = sorted(zip(np_lams, np_vecs), key=lambda x: x[0])
+            res = sorted(zip(lams, vecs), key=lambda x: x[0])
+
+            for re, tre in zip(res, true_res):
+                assert abs(re[0] - tre[0]) < 1e-6
+                assert close(re[1], tre[1]) or close(re[1], tre[1] * -1)
