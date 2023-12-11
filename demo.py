@@ -17,11 +17,12 @@ def eigvec_error(x, y):
 
 
 # A = np.array([[-1, 0], [0, -1]], dtype=float)
-A = np.array([[2, 0, 0], [0, 3, 4], [0, 4, 9]], dtype=float)
+A = np.array([[-2, 0, 0], [0, 3, 4], [0, 4, 9]], dtype=float)
 
 npvals, npvecs = np.linalg.eig(A)
 npvecs = np.swapaxes(npvecs, 0, 1)
 true_val_vec = list(sorted(zip(npvals, npvecs), key=lambda x: x[0]))
+true_val_vec_abs_sort = list(sorted(zip(npvals, npvecs), key=lambda x: abs(x[0])))
 
 
 def closest(lam):
@@ -39,7 +40,7 @@ for val, vec in true_val_vec:
 print()
 
 print(
-    "[Метод простых итераций] Наибольшее по модулю собственное значение и соотвествующий вектор: "
+    "[Метод степенных итераций] Наибольшее по модулю собственное значение и соотвествующий вектор: "
 )
 val, vec = max_eigen_pair(A, deterministic=True)
 print_round(val, vec)
@@ -47,11 +48,11 @@ print(f"\tErrors: {norm(val - closest(val)[0])}, {eigvec_error(vec, closest(val)
 print()
 
 print(
-    "[Метод обратных простых итераций] Наименьшее по модулю собственное значение и соотвествующий вектор: "
+    "[Метод итераций Рэлея] Наименьшее по модулю собственное значение и соотвествующий вектор: "
 )
 val, vec = min_eigen_pair(A, deterministic=True)
 print_round(val, vec)
-print(f"\tErrors: {norm(val - closest(val)[0])}, {eigvec_error(vec, closest(val)[1])}")
+print(f"\tErrors: {norm(val - closest(val)[0])}, {eigvec_error(vec, true_val_vec_abs_sort[0][1])}")
 print()
 
 print("[Метод вращений] Собственные значения и соотвествующие векторы: ")

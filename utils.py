@@ -1,10 +1,10 @@
 from numpy.typing import NDArray
 import numpy as np
+from numpy.linalg import norm
+from math import isclose
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]
-
-GLOBAL_EPS = 1e-9
 
 
 def determinant(A: Matrix) -> float:
@@ -29,7 +29,7 @@ def determinant(A: Matrix) -> float:
             A[[max_lead, i]] = A[[i, max_lead]]
             swap_mul *= -1
 
-        if abs(A[i, i]) < GLOBAL_EPS:
+        if isclose(A[i, i], 0):
             return 0.0
 
         det_A *= A[i, i]
@@ -50,7 +50,7 @@ def matrix_is_singular(A: Matrix) -> bool:
         bool: False, если матрица вырождена.
     """
 
-    return abs(determinant(A)) > GLOBAL_EPS
+    return not isclose(abs(determinant(A)), 0)
 
 
 def validate_matrix(A: Matrix):
@@ -104,6 +104,9 @@ def gauss_jordan(A: Matrix, Y: Vector) -> Vector:
         if max_lead != i:
             AY[[max_lead, i]] = AY[[i, max_lead]]
 
+        if isclose(AY[i, i], 0.0):
+            raise ValueError("Solution doesn't exist: A is not singular")
+
         AY[i] /= AY[i, i]
 
         for j in range(i + 1, n):
@@ -119,7 +122,7 @@ def gauss_jordan(A: Matrix, Y: Vector) -> Vector:
 if __name__ == "__main__":
 
     def close(x, y) -> bool:
-        return np.linalg.norm(x - y) < GLOBAL_EPS
+        return norm(x - y) < 1e-9
 
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(2, 128, 4)]
@@ -127,7 +130,7 @@ if __name__ == "__main__":
 
     for i, A in enumerate(matricies):
         Y = np.ones(A.shape[0])
-        assert np.linalg.det(A) / determinant(A) - 1 < 1e-9, "Failed det check"
+        assert isclose(np.linalg.det(A), determinant(A)), "Failed det check"
         assert close(
             np.linalg.solve(A, Y), gauss_jordan(A, Y)
         ), "Failed SLE solution check"

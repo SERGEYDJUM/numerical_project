@@ -1,9 +1,9 @@
 from numpy.typing import NDArray
-from numpy.linalg import norm
 from numpy.random import randn
+from numpy.linalg import norm
 import numpy as np
 
-from utils import validate_matrix, gauss_jordan, GLOBAL_EPS, matrix_is_singular
+from utils import validate_matrix, gauss_jordan, matrix_is_singular
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]
@@ -80,7 +80,11 @@ def closest_eigen_pair(
 
     lam, old_lam = approx_eigen, 0
     for _ in range(max_iter):
-        X = gauss_jordan(lam * Eye - A, X)
+        try:
+            X = gauss_jordan(lam * Eye - A, X)
+        except ValueError:
+            return lam, X
+
         X /= norm(X)
 
         old_lam, lam = lam, X @ A @ X
@@ -90,7 +94,9 @@ def closest_eigen_pair(
     return lam, X
 
 
-def min_eigen_pair(A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False) -> (float, Vector):
+def min_eigen_pair(
+    A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False
+) -> (float, Vector):
     """Находит минимальное по модулю собственное значение и \
         соответствующий собственный вектор c помощью метода итераций Рэлея.
 
@@ -106,12 +112,8 @@ def min_eigen_pair(A: Matrix, max_iter: int = 512, eps: float = 1e-12, determini
     Returns:
         (float, NDArray): Собственное значение и вектор.
     """
-    
-    attempts = [closest_eigen_pair(A, 10, max_iter, eps, deterministic),
-        closest_eigen_pair(A, 0, max_iter, eps, deterministic),
-        closest_eigen_pair(A, -10, max_iter, eps, deterministic)]
 
-    return sorted(attempts, key=lambda x: abs(x[0]))[0]
+    return closest_eigen_pair(A, 0, max_iter, eps, deterministic)
 
 
 def eigen_pairs_symmetric(
@@ -172,16 +174,19 @@ def eigen_pairs_symmetric(
 
 
 if __name__ == "__main__":
-    def close(x, y, eps=1e-5) -> bool:
-        return np.linalg.norm(x - y) < eps
 
-    def pair_fits_any(corr_vecs: Matrix, corr_lams: Vector, incorrect: Vector, lam: float) -> bool:
+    def close(x, y, eps=1e-4) -> bool:
+        return norm(x - y) < eps
+
+    def pair_fits_any(
+        corr_vecs: Matrix, corr_lams: Vector, incorrect: Vector, lam: float
+    ) -> bool:
         for corvec, corlam in zip(corr_vecs, corr_lams):
             if close(corvec, incorrect, 1e-4) or close(corvec, incorrect * -1, 1e-4):
                 if abs(corlam - lam) < 1e-4:
                     return True
         return False
-    
+
     def get_rand_symm_matrix(r: int) -> Matrix:
         A = np.random.rand(r, r)
         A = np.triu(A) + np.triu(A, k=1).T
@@ -193,29 +198,29 @@ if __name__ == "__main__":
     )
 
     for i, A in enumerate(matricies):
-        np_lams, np_vecs = np.linalg.eig(A)            
+        np_lams, np_vecs = np.linalg.eig(A)
         np_vecs = np.transpose(np_vecs)
-        
+
         if not close(np.conj(np_lams), np_lams):
             # Skipping complex eigenvalues
             continue
-        
+
         if any(not close(vec, np.conj(vec)) for vec in np_vecs):
             # Skipping complex eigenvectors
             continue
-            
+
         true_res = list(sorted(zip(np_lams, np_vecs), key=lambda x: abs(x[0])))
         np_small = true_res[0]
         np_big = true_res[-1]
 
         lam_small, vec_small = min_eigen_pair(A, deterministic=True)
-        if abs(lam_small - np_small[0]) > GLOBAL_EPS:
+        if abs(lam_small - np_small[0]) > 1e-9:
             if pair_fits_any(np_vecs, np_lams, vec_small, lam_small):
                 print(f"Lambdas by NumPy and wrong smallest: {np_lams, lam_small}")
                 assert False, "Is not a minimal eigenvalue"
             else:
+                print(vec_small, np_vecs)
                 assert False, "Calculated eigenvector won't fit any NP vectors"
-            
 
     matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
 
