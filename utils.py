@@ -50,7 +50,7 @@ def matrix_is_singular(A: Matrix) -> bool:
         (bool): False, если матрица вырождена.
     """
 
-    return not isclose(abs(determinant(A)), 0, rel_tol=1e-4)
+    return not isclose(abs(determinant(A)), 0, abs_tol=1e-3)
 
 
 def validate_matrix(A: Matrix):

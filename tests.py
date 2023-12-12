@@ -37,6 +37,13 @@ def get_rand_symm_matrix(r: int) -> Matrix:
     return A
 
 
+def get_symm_singular(r: int) -> Matrix:
+    while True:
+        A = get_rand_symm_matrix(r)
+        if matrix_is_singular(A):
+            return A
+
+
 def T_relay() -> str:
     # Проверка метода Рэлея и степенных итераций
     matricies = filter(
@@ -78,7 +85,7 @@ def T_relay() -> str:
 
 def T_rotation() -> str:
     # Проверка метода вращений
-    matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
+    matricies = [get_symm_singular(r) for r in range(2, 18)]
 
     for i, A in enumerate(matricies):
         np_lams, np_vecs = np.linalg.eig(A)
@@ -177,6 +184,7 @@ def playground() -> str:
                 matched.append(lam)
                 break
     
+    print(f"Determinant: {determinant(A)}")
     print(f"True eigen values: {true_lams}")
     print(f"QRI eigenvalues: {lams}")
     print(f"Mismatched: {[x for x in lams if x not in matched]}")
