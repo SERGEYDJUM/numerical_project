@@ -200,11 +200,11 @@ def eigen_values(
     n = A.shape[0]
     # Q_k = np.eye(n)
     for _ in range(max_iter):
-        shift = np.eye(n) * (A[-1, -1] * 0.99)  # Limit shift
-        Q, R = qr_decomposition(A - shift)
-        # Q, R = qr_decomposition(A)
-        A = R @ Q + shift
-        # A = R @ Q
+        # shift = np.eye(n) * (A[-1, -1] * 0.99)  # Limit shift
+        # Q, R = qr_decomposition(A - shift)
+        Q, R = qr_decomposition(A)
+        # A = R @ Q + shift
+        A = R @ Q
         # Q_k = Q_k @ Q
 
         if isclose(norm(np.tril(A, k=-1)), 0):

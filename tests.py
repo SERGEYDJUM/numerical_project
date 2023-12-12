@@ -122,24 +122,21 @@ for i, matrix in enumerate(matricies):
             print(f"{tlams=}", end="\n\n")
             print(f"{lams=}", end="\n\n")
         assert norm(lam - tlam) < 1e-5, f"{lam} != {tlam}"
-        
-if __name__ == "__main__":
-    def close(x, y) -> bool:
-        return norm(x - y) < 1e-7
-    
-    matricies = filter(
-        matrix_is_singular, [np.random.rand(r, r) for r in range(3, 128, 3)]
-    )
 
-    for i, A in enumerate(matricies):
-        Y = np.ones(A.shape[0])
-        
-        assert isclose(np.linalg.det(A), determinant(A)), "Failed det check"
-        
-        assert close(
-            np.linalg.solve(A, Y), gauss_jordan(A, Y)
-        ), "Failed SLE solution check"
-        
-        Q, R = qr_decomposition(A)
-        assert close(Q @ R, A), "Failed QR check"
-        break
+
+matricies = filter(
+    matrix_is_singular, [np.random.rand(r, r) for r in range(3, 128, 3)]
+)
+
+for i, A in enumerate(matricies):
+    Y = np.ones(A.shape[0])
+    
+    assert isclose(np.linalg.det(A), determinant(A)), "Failed det check"
+    
+    assert close(
+        np.linalg.solve(A, Y), gauss_jordan(A, Y)
+    ), "Failed SLE solution check"
+    
+    Q, R = qr_decomposition(A)
+    assert close(Q @ R, A), "Failed QR check"
+    break
