@@ -2,6 +2,7 @@ from numpy.typing import NDArray
 from numpy.random import randn
 from numpy.linalg import norm
 from math import isclose
+from cmath import sqrt as csqrt
 import numpy as np
 
 from utils import validate_matrix, gauss_jordan, matrix_is_singular, qr_decomposition, validate_square
@@ -177,7 +178,7 @@ def eigen_pairs_symmetric(
     return np.diag(A), np.transpose(H_res)
 
 
-def eigen_values(A: Matrix, max_iter: int = 1024, eps: float = 1e-9) -> Vector:
+def eigen_values(A: Matrix, max_iter: int = 5048, eps: float = 1e-9) -> Vector:
     """Вычисляет собственные значения квадратной матрицы итеративно \
         с помощью QR-разложения.
 
@@ -195,17 +196,35 @@ def eigen_values(A: Matrix, max_iter: int = 1024, eps: float = 1e-9) -> Vector:
     validate_square(A)
     n = A.shape[0]
     A_k = A
-    Q_k = np.eye(n)
+    # Q_k = np.eye(n)
     for _ in range(max_iter):
-        shift = np.eye(n) * (A_k[-1, -1] * 0.99) # Limit shift
-        Q, R = qr_decomposition(A_k - shift)
-        A_k = R @ Q + shift
-        Q_k = Q_k @ Q
+        # shift = np.eye(n) * (A_k[-1, -1] * 0.99) # Limit shift
+        # Q, R = qr_decomposition(A_k - shift)
+        Q, R = qr_decomposition(A_k)
+        # A_k = R @ Q + shift
+        A_k = R @ Q
+        # Q_k = Q_k @ Q
         
-        if isclose(norm(np.tril(A_k, k=-1)), 0, rel_tol=eps):
-            break
+        # if isclose(norm(np.tril(A_k, k=-1)), 0, rel_tol=eps):
+        #     break
     
-    return np.diag(A_k)
+    Lams = np.zeros(n, dtype=complex)
+    i = 0
+    while i < n:
+        if i == n - 1:
+            Lams[i] = A_k[i, i]
+            break
+        
+        if isclose(A_k[i+1, i], 0):
+            Lams[i] = A_k[i, i]
+            i += 1
+        else:
+            lams = rank_two_eigen_pairs(A_k[i:i+2, i:i+2])[0]
+            Lams[i] = lams[0]
+            Lams[i+1] = lams[1]
+            i += 2
+
+    return Lams
 
 
 def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
@@ -219,8 +238,8 @@ def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
     Returns:
         (NDArray, NDArray): Массив собственных значений и матрица с собственными векторами по рядам.
     """
-    if A.shape[0] != 2:
-        raise ValueError("Matrix with incorrect dims was passed")
+    if A.shape[0] != 2 or A.shape[1] != 2:
+        raise ValueError("Matrix with incorrect dims passed")
     
     a = A[0, 0]
     b = A[0, 1]
@@ -233,15 +252,23 @@ def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
     
     dis = (a + d)**2 - 4*det
     
-    if dis < 0.0:
-        raise ValueError("Complex eigenvalues are not supported")
+    vecs = np.zeros((2, 2), dtype=complex)
+    lams = np.zeros(2, dtype=complex)
     
-    vecs = np.zeros((2, 2))
-    lams = np.zeros(2)
     for i, sign in enumerate((-1, 1)):
-        lams[i] = (a + d + sign * np.sqrt(dis))/2
-        vecs[i] = np.array([1.0, (a + c - lams[i])/(lams[i] - d - b)])
-        vecs[i] /= norm(vecs[i])
+        lams[i] = (a + d + sign * csqrt(complex(dis)))/2
+        
+    if np.isclose(d, 0) or np.isclose(b, 0):
+        vecs[0] = np.array([lams[0], 0])
+        vecs[1] = np.array([0, lams[1]])
+    else:
+        vecs[0] = np.array([b, lams[0] - a])
+        vecs[1] = np.array([lams[1] - d, c])
+        
+        for i in range(2):
+            vin = norm(vecs[i])
+            if not isclose(vin, 0): 
+                vecs[i] /= vin
             
     return lams, vecs 
 
@@ -266,19 +293,6 @@ if __name__ == "__main__":
         A = np.triu(A) + np.triu(A, k=1).T
         assert close(A - A.T, np.zeros_like(A))
         return A
-
-
-    # Проверка QR
-    matricies = filter(matrix_is_singular, [np.random.rand(r, r) for r in range(2, 32, 3)])
-    
-    for i, matrix in enumerate(matricies):
-        lams = sorted(eigen_values(matrix))
-        tlams = sorted(np.linalg.eig(matrix)[0])
-        
-        for lam, tlam in zip(lams, tlams):
-            if isinstance(tlam, complex):
-                continue
-            assert isclose(norm(lam), norm(tlam)), f"{lam} != {tlam}"
     
     
     # Проверка 2x2
@@ -287,16 +301,31 @@ if __name__ == "__main__":
     for i, A in enumerate(matricies):
         
         np_lams, np_vecs = np.linalg.eig(A)
-        lams, _ = rank_two_eigen_pairs(A)
+        np_vecs = np_vecs.T
+        lams, vecs = rank_two_eigen_pairs(A)
         
-        true_res = sorted(zip(np_lams, np_vecs), key=lambda x: x[0])
-        res = sorted(zip(lams, lams), key=lambda x: x[0])
+        true_res = sorted(zip(np_lams, np_vecs), key=lambda x: (x[0].real, x[0].imag))
+        res = sorted(zip(lams, vecs), key=lambda x: (x[0].real, x[0].imag))
         
         for r, tr in zip(res, true_res):
-            if abs(r[0] - tr[0]) > 1e-5:
-                print(A)
-                print(np_lams, lams)
-                assert False
+            if isclose(r[0].real, tr[0].real) and isclose(r[0].imag, tr[0].imag):
+                test1 = norm(r[1] - tr[1])
+                test2 = norm(r[1] + tr[1])
+                if not (np.isclose(test1, 0) or np.isclose(test2, 0)):
+                    assert False, f"Eigenvectors do not match: {r[1]} != {tr[1]}"
+            else:
+                assert False, "2x2 Matrix check failed"
+            
+
+    # Проверка QR
+    matricies = filter(matrix_is_singular, [np.random.rand(r, r) for r in range(2, 32, 3)])
+    
+    for i, matrix in enumerate(matricies):
+        lams = sorted(eigen_values(matrix), key=lambda x: (x.real, x.imag))
+        tlams = sorted(np.linalg.eig(matrix)[0], key=lambda x: (x.real, x.imag))
+        
+        for lam, tlam in zip(lams, tlams):
+            assert norm(lam - tlam) < 1e-5, f"{lam} != {tlam}"
 
 
     # Проверка метода Рэлея и степенных итераций
