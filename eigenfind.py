@@ -174,18 +174,36 @@ def eigen_pairs_symmetric(
     return np.diag(A), np.transpose(H_res)
 
 
-def eig(A: Matrix, max_iter: int = 512) -> (Vector, Matrix):
+def eigen_values(A: Matrix, max_iter: int = 1024, eps: float = 1e-9) -> Vector:
+    """Вычисляет собственные значения квадратной матрицы итеративно \
+        с помощью QR-разложения.
+
+    Args:
+        A (NDArray): Матрица.
+        
+        max_iter (int, optional): Ограничение по итерациям алгоритма.
+        
+        eps (float): Ограничение по точности, по достижении которй итерации прекращаются.
+        
+    Returns:
+        (NDArray): Массив собственных значений.
+    """    
+    
     validate_square(A)
     n = A.shape[0]
     A_k = A
     Q_k = np.eye(n)
     for _ in range(max_iter):
-        shift = np.eye(n) * A_k[-1, -1]
+        shift = np.eye(n) * (A_k[-1, -1] * 0.99) # Limit shift
         Q, R = qr_decomposition(A_k - shift)
         A_k = R @ Q + shift
         Q_k = Q_k @ Q
+        
+        if isclose(norm(np.tril(A_k, k=-1)), 0, rel_tol=eps):
+            break
     
-    return A_k, Q_k
+    return np.diag(A_k)
+
 
 def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
     """Находит все собственные значения матрицы 2x2 и соответствующие собственные векторы напрямую.
@@ -247,6 +265,19 @@ if __name__ == "__main__":
         return A
 
 
+    # Проверка QR
+    matricies = filter(matrix_is_singular, [np.random.rand(r, r) for r in range(2, 32, 3)])
+    
+    for i, matrix in enumerate(matricies):
+        lams = sorted(eigen_values(matrix))
+        tlams = sorted(np.linalg.eig(matrix)[0])
+        
+        for lam, tlam in zip(lams, tlams):
+            if isinstance(tlam, complex):
+                continue
+            assert isclose(norm(lam), norm(tlam)), f"{lam} != {tlam}"
+    
+    
     # Проверка 2x2
     matricies = filter(matrix_is_singular, [np.random.rand(2, 2) for _ in range(100)])
     
@@ -267,7 +298,7 @@ if __name__ == "__main__":
 
     # Проверка метода Рэлея и степенных итераций
     matricies = filter(
-        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 18, 1)]
+        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 28, 1)]
     )
 
     for i, A in enumerate(matricies):
@@ -287,6 +318,16 @@ if __name__ == "__main__":
         np_big = true_res[-1]
 
         lam_small, vec_small = min_eigen_pair(A)
+        lam_big, vec_big = max_eigen_pair(A)
+        
+        if abs(lam_big - np_big[0]) > 1e-9:
+            if pair_fits_any(np_vecs, np_lams, vec_big, lam_big):
+                print(f"Lambdas by NumPy and wrong biggest: {np_lams, lam_big}")
+                assert False, "Is not a biggest eigenvalue"
+            else:
+                print(vec_small, np_vecs)
+                assert False, "Calculated eigenvector won't fit any NP vectors"
+        
         if abs(lam_small - np_small[0]) > 1e-9:
             if pair_fits_any(np_vecs, np_lams, vec_small, lam_small):
                 print(f"Lambdas by NumPy and wrong smallest: {np_lams, lam_small}")
@@ -295,6 +336,8 @@ if __name__ == "__main__":
                 print(vec_small, np_vecs)
                 assert False, "Calculated eigenvector won't fit any NP vectors"
 
+
+    # Проверка метода вращений
     matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
 
     for i, A in enumerate(matricies):

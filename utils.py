@@ -16,7 +16,7 @@ def determinant(A: Matrix) -> float:
         A (NDArray): Матрица
 
     Returns:
-        float: Определитель матрицы.
+        (float): Определитель матрицы.
     """
 
     A = np.copy(A)
@@ -47,7 +47,7 @@ def matrix_is_singular(A: Matrix) -> bool:
         A (NDArray): Матрица.
 
     Returns:
-        bool: False, если матрица вырождена.
+        (bool): False, если матрица вырождена.
     """
 
     return not isclose(abs(determinant(A)), 0, rel_tol=1e-4)
@@ -85,7 +85,7 @@ def partial_pivot_matrix(A: Matrix) -> Matrix:
         A (NDArray): Исходная матрица.
 
     Returns:
-        NDArray: Матрица P.
+        (NDArray): Матрица P.
     """
 
     n = A.shape[0]
@@ -104,7 +104,7 @@ def gauss_jordan(A: Matrix, Y: Vector) -> Vector:
         Y (NDArray): Столбец свободных значений.
 
     Returns:
-        NDArray: Решение системы уравнений.
+        (NDArray): Решение системы уравнений.
     """
 
     n = A.shape[0]
