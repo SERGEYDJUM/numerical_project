@@ -1,4 +1,4 @@
-from eigenfind import min_eigen_pair, max_eigen_pair, eigen_pairs_symmetric
+from eigenfind import min_eigen_pair, max_eigen_pair, eigen_pairs_symmetric, eigen_values
 import numpy as np
 from numpy.linalg import norm
 
@@ -34,7 +34,7 @@ def closest(lam):
     return true_val_vec[clo_val_idx]
 
 
-print("Eigenvalues and eigenvectors calculated by numpy.linalg.eig:")
+print("[Ориентировочные собственные значения и векторы, вычесленные numpy.linalg.eig]:")
 for val, vec in true_val_vec:
     print_round(val, vec)
 print()
@@ -64,4 +64,12 @@ for i, data in enumerate(sorted(zip(vals, vecs), key=lambda x: x[0])):
     vec_errors.append(eigvec_error(vec, closest(val)[1]))
     print_round(val, vec)
 print(f"\tAverage errors: {np.average(val_errors)}, {np.average(vec_errors)}")
+print()
+
+print("[Метод QR] Собственные значения: ")
+vals = eigen_values(A)
+for val in sorted(vals):
+    val_errors.append(norm(val - closest(val)[0]))
+    print(f"\t{val:.2f}")
+print(f"\tAverage error: {np.average(val_errors)}")
 print()
