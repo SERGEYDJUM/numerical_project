@@ -129,9 +129,10 @@ def T_qr_iter() -> str:
 
         for lam, true_lam in zip(lams, true_lams):
             if norm(lam - true_lam) > 1e-3:
-                print(f"{i=}", end="\n\n")
-                print(f"{true_lams=}", end="\n\n")
-                print(f"{lams=}", end="\n\n")
+                # print(f"{i=}", end="\n\n")
+                # print(f"{true_lams=}", end="\n\n")
+                # print(f"{lams=}", end="\n\n")
+                # print(matrix)
                 return f"Failed qri check: {lam} != {true_lam}"
 
 
@@ -155,11 +156,35 @@ def T_det_and_gj() -> str:
 
 
 def playground() -> str:
-    pass
-
+    def comp_key(x):
+        return (x.real, x.imag)
+    
+    A = np.array([
+        [0.08770608, 0.66733973, 0.68138823, 0.95954237, 0.15455779],
+        [0.09314774, 0.75665306, 0.70949404, 0.4281082,  0.92111275],
+        [0.42515646, 0.28478231, 0.47489026, 0.77481373, 0.20974817],
+        [0.94189888, 0.00381377, 0.8366714,  0.04782337, 0.59311576],
+        [0.04456993, 0.4124859,  0.01261069, 0.58334299, 0.33979129],
+    ])
+    
+    lams = sorted(eigen_values(A), key=comp_key)
+    true_lams = sorted(np.linalg.eig(A)[0], key=comp_key)
+    
+    matched = []
+    for tlam in true_lams:
+        for lam in lams:
+            if np.isclose(lam, tlam):
+                matched.append(lam)
+                break
+    
+    print(f"True eigen values: {true_lams}")
+    print(f"QRI eigenvalues: {lams}")
+    print(f"Mismatched: {[x for x in lams if x not in matched]}")
+    print("\n\n")
+    
 
 if __name__ == "__main__":
-    tests = [T_det_and_gj, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
+    tests = [playground, T_det_and_gj, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
     
     for test in tests:
         if msg := test():
