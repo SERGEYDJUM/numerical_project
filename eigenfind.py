@@ -178,7 +178,7 @@ def eigen_pairs_symmetric(
     return np.diag(A), np.transpose(H_res)
 
 
-def eigen_values(A: Matrix, max_iter: int = 5048, eps: float = 1e-9) -> Vector:
+def eigen_values(A: Matrix, max_iter: int = 512, eps: float = 1e-9) -> Vector:
     """Вычисляет собственные значения квадратной матрицы итеративно \
         с помощью QR-разложения.
 
@@ -195,6 +195,7 @@ def eigen_values(A: Matrix, max_iter: int = 5048, eps: float = 1e-9) -> Vector:
     
     validate_square(A)
     n = A.shape[0]
+    
     A_k = A
     # Q_k = np.eye(n)
     for _ in range(max_iter):
@@ -205,8 +206,8 @@ def eigen_values(A: Matrix, max_iter: int = 5048, eps: float = 1e-9) -> Vector:
         A_k = R @ Q
         # Q_k = Q_k @ Q
         
-        # if isclose(norm(np.tril(A_k, k=-1)), 0, rel_tol=eps):
-        #     break
+        if isclose(norm(np.tril(A_k, k=-1)), 0):
+            break
     
     Lams = np.zeros(n, dtype=complex)
     i = 0
@@ -296,7 +297,7 @@ if __name__ == "__main__":
     
     
     # Проверка 2x2
-    matricies = filter(matrix_is_singular, [np.random.rand(2, 2) for _ in range(100)])
+    matricies = [np.random.rand(2, 2) for _ in range(500)]
     
     for i, A in enumerate(matricies):
         
@@ -321,10 +322,14 @@ if __name__ == "__main__":
     matricies = filter(matrix_is_singular, [np.random.rand(r, r) for r in range(2, 32, 3)])
     
     for i, matrix in enumerate(matricies):
-        lams = sorted(eigen_values(matrix), key=lambda x: (x.real, x.imag))
         tlams = sorted(np.linalg.eig(matrix)[0], key=lambda x: (x.real, x.imag))
+        lams = sorted(eigen_values(matrix), key=lambda x: (x.real, x.imag))
         
         for lam, tlam in zip(lams, tlams):
+            if not norm(lam - tlam) < 1e-5:
+                print(f"{i=}", end="\n\n")
+                print(f"{tlams=}", end="\n\n")
+                print(f"{lams=}", end="\n\n")
             assert norm(lam - tlam) < 1e-5, f"{lam} != {tlam}"
 
 
