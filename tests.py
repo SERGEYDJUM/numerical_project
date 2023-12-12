@@ -37,7 +37,7 @@ def get_rand_symm_matrix(r: int) -> Matrix:
     return A
 
 
-def relay() -> str:
+def T_relay() -> str:
     # Проверка метода Рэлея и степенных итераций
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(2, 28, 1)]
@@ -76,7 +76,7 @@ def relay() -> str:
                 return f"Calculated eigenvector won't fit any NP vectors {vec_small} {np_vecs}"
 
 
-def rotation() -> str:
+def T_rotation() -> str:
     # Проверка метода вращений
     matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
 
@@ -96,7 +96,7 @@ def rotation() -> str:
                 return "Eigenvectors do not match"
 
 
-def two_by_two_complex() -> str:
+def T_two_by_two_complex() -> str:
     matricies = [np.random.rand(2, 2) for _ in range(500)]
 
     for i, A in enumerate(matricies):
@@ -117,7 +117,7 @@ def two_by_two_complex() -> str:
                 return "2x2 Matrix check failed"
 
 
-def qr_iter() -> str:
+def T_qr_iter() -> str:
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(2, 32, 3)]
     )
@@ -135,7 +135,7 @@ def qr_iter() -> str:
                 return f"Failed qri check: {lam} != {true_lam}"
 
 
-def det_and_gj() -> str:
+def T_det_and_gj() -> str:
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(3, 128, 3)]
     )
@@ -154,18 +154,13 @@ def det_and_gj() -> str:
             return "Failed QR check"
 
 
+def playground() -> str:
+    pass
+
+
 if __name__ == "__main__":
-    if msg := det_and_gj():
-        print(msg)
-
-    if msg := two_by_two_complex():
-        print(msg)
-
-    if msg := relay():
-        print(msg)
-
-    if msg := rotation():
-        print(msg)
-
-    if msg := qr_iter():
-        print(msg)
+    tests = [T_det_and_gj, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
+    
+    for test in tests:
+        if msg := test():
+            print(msg)

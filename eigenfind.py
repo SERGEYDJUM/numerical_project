@@ -5,7 +5,7 @@ from math import isclose
 from cmath import sqrt as csqrt
 import numpy as np
 
-from utils import validate_matrix, gauss_jordan, qr_decomposition, validate_square
+from utils import validate_matrix, gauss_jordan, qr_decomposition
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]
@@ -196,7 +196,9 @@ def eigen_values(
         (NDArray): Массив собственных значений.
     """
 
-    validate_square(A)
+    if A.shape[0] != A.shape[1]:
+        raise ValueError("Matrix must be square")
+    
     n = A.shape[0]
     # Q_k = np.eye(n)
     for _ in range(max_iter):

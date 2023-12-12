@@ -66,17 +66,6 @@ def validate_matrix(A: Matrix):
         raise ValueError("Matrix must have a determinant")
 
 
-def validate_square(A: Matrix):
-    """Выводит ошибку, если матрица неквадратна.
-
-    Args:
-        A (NDArray): Матрица.
-    """
-
-    if A.shape[0] != A.shape[1]:
-        raise ValueError("Matrix must be square")
-
-
 def partial_pivot_matrix(A: Matrix) -> Matrix:
     """Строит матрицу перестановок строк P, при которой B = P @ A имеет \
     наибольшую по модулю диагональ после приведения к ступенчатому виду.
