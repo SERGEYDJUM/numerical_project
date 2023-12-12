@@ -4,7 +4,7 @@ from numpy.linalg import norm
 from math import isclose
 import numpy as np
 
-from utils import validate_matrix, gauss_jordan, matrix_is_singular
+from utils import validate_matrix, gauss_jordan, matrix_is_singular, qr_decomposition, validate_square
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]    
@@ -174,6 +174,19 @@ def eigen_pairs_symmetric(
     return np.diag(A), np.transpose(H_res)
 
 
+def eig(A: Matrix, max_iter: int = 512) -> (Vector, Matrix):
+    validate_square(A)
+    n = A.shape[0]
+    A_k = A
+    Q_k = np.eye(n)
+    for _ in range(max_iter):
+        shift = np.eye(n) * A_k[-1, -1]
+        Q, R = qr_decomposition(A_k - shift)
+        A_k = R @ Q + shift
+        Q_k = Q_k @ Q
+    
+    return A_k, Q_k
+
 def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
     """Находит все собственные значения матрицы 2x2 и соответствующие собственные векторы напрямую.
     
@@ -234,6 +247,7 @@ if __name__ == "__main__":
         return A
 
 
+    # Проверка 2x2
     matricies = filter(matrix_is_singular, [np.random.rand(2, 2) for _ in range(100)])
     
     for i, A in enumerate(matricies):
@@ -251,6 +265,7 @@ if __name__ == "__main__":
                 assert False
 
 
+    # Проверка метода Рэлея и степенных итераций
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(2, 18, 1)]
     )
@@ -271,7 +286,7 @@ if __name__ == "__main__":
         np_small = true_res[0]
         np_big = true_res[-1]
 
-        lam_small, vec_small = min_eigen_pair(A, deterministic=True)
+        lam_small, vec_small = min_eigen_pair(A)
         if abs(lam_small - np_small[0]) > 1e-9:
             if pair_fits_any(np_vecs, np_lams, vec_small, lam_small):
                 print(f"Lambdas by NumPy and wrong smallest: {np_lams, lam_small}")

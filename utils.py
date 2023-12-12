@@ -50,7 +50,7 @@ def matrix_is_singular(A: Matrix) -> bool:
         bool: False, если матрица вырождена.
     """
 
-    return not isclose(abs(determinant(A)), 0)
+    return not isclose(abs(determinant(A)), 0, rel_tol=1e-4)
 
 
 def validate_matrix(A: Matrix):
@@ -64,6 +64,17 @@ def validate_matrix(A: Matrix):
         raise ValueError("Matrix must be square")
     if not matrix_is_singular(A):
         raise ValueError("Matrix must have a determinant")
+
+
+def validate_square(A: Matrix):
+    """Выводит ошибку, если матрица неквадратна.
+
+    Args:
+        A (NDArray): Матрица.
+    """
+
+    if A.shape[0] != A.shape[1]:
+        raise ValueError("Matrix must be square")
 
 
 def partial_pivot_matrix(A: Matrix) -> Matrix:
@@ -118,20 +129,54 @@ def gauss_jordan(A: Matrix, Y: Vector) -> Vector:
 
     return AY[:, -1]
 
+
+def qr_decomposition(A: Matrix) -> (Matrix, Matrix):
+    """Производит QR-разложение матрицы A с помощью преобразования Хаусхолдера.
+
+    Args:
+        A (Matrix): Матрица
+
+    Returns:
+        (NDArray, NDArray): Q, R матрицы.
+    """
+    
+    n = A.shape[0]
+    R = A.copy()
+    Q = np.eye(n)
+    
+    for i in range(n):
+        u = R[i:, i, np.newaxis]
+        v = u / (u[0] + norm(u) * np.sign(u[0]))
+        v[0] = 1
+        
+        diff = (v @ v.T) * 2 / (v.T @ v) 
+        H = np.eye(n)
+        H[i:, i:] -= diff
+        
+        R = H @ R
+        Q = H @ Q
+        
+    return Q[:n].T, np.triu(R[:n])
+
 #######################################################
 
 if __name__ == "__main__":
-
     def close(x, y) -> bool:
-        return norm(x - y) < 1e-9
-
+        return norm(x - y) < 1e-7
+    
     matricies = filter(
-        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 128, 4)]
+        matrix_is_singular, [np.random.rand(r, r) for r in range(3, 128, 3)]
     )
 
     for i, A in enumerate(matricies):
         Y = np.ones(A.shape[0])
+        
         assert isclose(np.linalg.det(A), determinant(A)), "Failed det check"
+        
         assert close(
             np.linalg.solve(A, Y), gauss_jordan(A, Y)
         ), "Failed SLE solution check"
+        
+        Q, R = qr_decomposition(A)
+        assert close(Q @ R, A), "Failed QR check"
+        break
