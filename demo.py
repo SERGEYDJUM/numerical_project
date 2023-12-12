@@ -50,7 +50,7 @@ print()
 print(
     "[Метод итераций Рэлея] Наименьшее по модулю собственное значение и соотвествующий вектор: "
 )
-val, vec = min_eigen_pair(A, deterministic=True)
+val, vec = min_eigen_pair(A)
 print_round(val, vec)
 print(f"\tErrors: {norm(val - closest(val)[0])}, {eigvec_error(vec, true_val_vec_abs_sort[0][1])}")
 print()

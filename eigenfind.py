@@ -81,7 +81,7 @@ def closest_eigen_pair(
     lam, old_lam = approx_eigen, 0
     for _ in range(max_iter):
         try:
-            X = gauss_jordan(lam * Eye - A, X)
+            X = gauss_jordan(A - lam * Eye, X)
         except ValueError:
             return lam, X
 
@@ -95,7 +95,7 @@ def closest_eigen_pair(
 
 
 def min_eigen_pair(
-    A: Matrix, max_iter: int = 512, eps: float = 1e-12, deterministic: bool = False
+    A: Matrix, max_iter: int = 512, eps: float = 1e-12
 ) -> (float, Vector):
     # TODO: Make so that it actually finds smallest
     """Находит минимальное по модулю собственное значение и \
@@ -107,14 +107,17 @@ def min_eigen_pair(
         max_iter (int): Максимальное количество итераций алгоритма.
 
         eps (float): Ограничение по точности, по достижении которй итерации прекращаются.
-        
-        deterministic (bool): Включает заполнение начальных значений единицами, вместо случайных чисел.
 
     Returns:
         (float, NDArray): Собственное значение и вектор.
     """
 
-    return closest_eigen_pair(A, 0, max_iter, eps, deterministic)
+    def guess():
+        return closest_eigen_pair(A, 0, max_iter, eps, deterministic=False)
+
+    guesses = [guess(), guess(), guess()]
+    
+    return sorted(guesses, key=lambda x: abs(x[0]))[0]
 
 
 def eigen_pairs_symmetric(
