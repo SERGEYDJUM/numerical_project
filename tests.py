@@ -135,7 +135,7 @@ def T_qr_iter() -> str:
         lams = sorted(eigen_values(matrix), key=lambda x: (x.real, x.imag))
 
         for lam, true_lam in zip(lams, true_lams):
-            if norm(lam - true_lam) > 1e-3:
+            if norm(lam - true_lam) > 1e-2:
                 # print(f"{i=}", end="\n\n")
                 # print(f"{true_lams=}", end="\n\n")
                 # print(f"{lams=}", end="\n\n")

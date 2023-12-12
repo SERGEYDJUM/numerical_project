@@ -227,7 +227,8 @@ def eigen_values(
             Lams[[i, i + 1]] = extralams[[0, 1]]
             skip = True
 
-    Lams[-1] = A[-1, -1]
+    if not skip:
+        Lams[-1] = A[-1, -1]
     return Lams
 
 
