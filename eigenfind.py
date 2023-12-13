@@ -5,7 +5,7 @@ from math import isclose
 from cmath import sqrt as csqrt
 import numpy as np
 
-from utils import validate_matrix, gauss_jordan, qr_decomposition
+from utils import hessenberg_transform, validate_matrix, gauss_jordan, qr_decomposition
 
 Matrix = NDArray[np.float_]
 Vector = NDArray[np.float_]
@@ -200,6 +200,7 @@ def eigen_values(
 
 
     n = A.shape[0]
+    A = hessenberg_transform(A)
     # Q_k = np.eye(n)
     for _ in range(max_iter):
         # shift = np.eye(n) * (A[-1, -1] * 0.99)  # Limit shift

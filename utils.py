@@ -124,24 +124,45 @@ def householder_reflection(U: Vector) -> Matrix:
         отражения от плоскости с нормалью U.
 
     Args:
-        U (Vector): Вектор, перпендикулярный плоскости.
+        U (NDArray): Вектор, перпендикулярный плоскости.
 
     Returns:
-        Matrix: Нижняя правая часть матрицы отражения.
-    """    
+        (NDArray): Нижняя правая часть матрицы отражения.
+    """
+    n = U.shape[0]
+    P = np.eye(n)
+    
+    if np.isclose(norm(U), 0.0):
+        return P
+    
     v = U / (U[0] + np.copysign(norm(U), U[0]))
     v[0] = 1
     v = v[:, np.newaxis]
-    H = np.eye(U.shape[0])
-    H -= (v @ v.T) / (v.T @ v) * 2
-    return H
+    P -= (v @ v.T) / (v.T @ v) * 2
+    return P
 
 
-def hessenberg_matrix(A: Matrix) -> Matrix:
+def hessenberg_transform(A: Matrix) -> Matrix:
+    """Преобразует A к матрице Хессенберга с помощью отражений Хаусхолдера.
+
+    Примечание: поиск собственных значений такой матрицы легче, чем общей.
+
+    Args:
+        A (NDArray): Квадратная матрица.
+
+    Returns:
+        (NDArray): Квадратная матрица Хессенберга.
+    """    
+    
     n = A.shape[0]
-    P = np.eye(n)
-    P[1:, 1:] = householder_reflection(A[1:, 1])
-    return P.T.conj @ A @ P
+    A = A.copy()
+    
+    for i in range(n-2):
+        P = np.eye(n)
+        P[i+1:, i+1:] = householder_reflection(A[i+1:, i])
+        A = P @ (A @ np.conj(P.T))
+        
+    return A
 
 
 def qr_decomposition(R: Matrix) -> (Matrix, Matrix):

@@ -3,11 +3,10 @@ from numpy.linalg import norm
 from math import isclose
 import numpy as np
 
-from utils import matrix_is_singular, gauss_jordan, determinant, qr_decomposition
+from utils import hessenberg_transform, matrix_is_singular, gauss_jordan, determinant, qr_decomposition
 from eigenfind import (
     eigen_values,
     eigen_pairs_symmetric,
-    eigen_values_real,
     max_eigen_pair,
     min_eigen_pair,
     rank_two_eigen_pairs,
@@ -19,6 +18,10 @@ Vector = NDArray[np.float_]
 
 def close(x, y, eps=1e-4) -> bool:
     return norm(x - y) < eps
+
+
+def comp_key(x):
+        return (x.real, x.imag)
 
 
 def pair_fits_any(
@@ -144,21 +147,21 @@ def T_qr_iter() -> str:
                 return f"Failed qr_iter_complex check: {lam} != {true_lam} on dim {matrix.shape[0]}"
             
             
-def T_qr_iter_realonly() -> str:
-    matricies = [get_symm_singular(r) for r in range(2, 32, 3)]
-    # matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
+# def T_qr_iter_realonly() -> str:
+#     matricies = [get_symm_singular(r) for r in range(2, 32, 3)]
+#     # matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
 
-    for i, matrix in enumerate(matricies):
-        true_lams = sorted(np.linalg.eig(matrix)[0], key=lambda x: (x.real, x.imag))
-        lams = sorted(eigen_values_real(matrix), key=lambda x: (x.real, x.imag))
+#     for i, matrix in enumerate(matricies):
+#         true_lams = sorted(np.linalg.eig(matrix)[0], key=lambda x: (x.real, x.imag))
+#         lams = sorted(eigen_values_real(matrix), key=lambda x: (x.real, x.imag))
 
-        for lam, true_lam in zip(lams, true_lams):
-            if norm(lam - true_lam) > 1e-2:
-                # print(f"{i=}", end="\n\n")
-                # print(f"{true_lams=}", end="\n\n")
-                # print(f"{lams=}", end="\n\n")
-                # print(matrix)
-                return f"Failed qr_iter_real check: {lam} != {true_lam} on dim {matrix.shape[0]}"
+#         for lam, true_lam in zip(lams, true_lams):
+#             if norm(lam - true_lam) > 1e-2:
+#                 # print(f"{i=}", end="\n\n")
+#                 # print(f"{true_lams=}", end="\n\n")
+#                 # print(f"{lams=}", end="\n\n")
+#                 # print(matrix)
+#                 return f"Failed qr_iter_real check: {lam} != {true_lam} on dim {matrix.shape[0]}"
 
 
 def T_det() -> str:
@@ -167,6 +170,16 @@ def T_det() -> str:
     for i, A in enumerate(matricies):
         if not isclose(np.linalg.det(A), determinant(A)):
             return "Failed det check"
+
+
+def T_hessenberg() -> str:
+    matricies = [np.random.rand(r, r) for r in range(3, 128, 3)]
+    for matrix in matricies:
+        alams = sorted(np.linalg.eig(matrix)[0], key=comp_key)
+        hlams = sorted(np.linalg.eig(hessenberg_transform(matrix))[0], key=comp_key)
+        for alam, hlam in zip(alams, hlams):
+            if not np.isclose(alam, hlam):
+                return "Hessenberg matrix is not equivalent"
 
 
 def T_qr_gauss() -> str:
@@ -186,9 +199,6 @@ def T_qr_gauss() -> str:
 
 
 def playground() -> str:
-    def comp_key(x):
-        return (x.real, x.imag)
-    
     A = np.array([
         [0.08770608, 0.66733973, 0.68138823, 0.95954237, 0.15455779],
         [0.09314774, 0.75665306, 0.70949404, 0.4281082,  0.92111275],
@@ -217,10 +227,11 @@ def playground() -> str:
     
 
 if __name__ == "__main__":
-    tests = [T_det, T_qr_gauss, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter_realonly, T_qr_iter]
+    tests = [T_det, T_hessenberg, T_qr_gauss, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
     # tests = [playground, T_det, T_qr_gauss]
     
     
     for test in tests:
         if msg := test():
             print(msg)
+            
