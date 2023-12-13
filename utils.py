@@ -129,6 +129,7 @@ def householder_reflection(U: Vector) -> Matrix:
     Returns:
         (NDArray): Нижняя правая часть матрицы отражения.
     """
+    
     n = U.shape[0]
     P = np.eye(n)
     

@@ -193,20 +193,6 @@ def eigen_values(
     Returns:
         (NDArray): Массив собственных значений.
     """
-    
-    def wilkinson_shift(A: Matrix) -> float:
-        mu, nu = rank_two_eigen_pairs(A[-2:, -2:])[0]
-        mu_is_real = np.isclose(mu.imag, 0)
-        nu_is_real = np.isclose(nu.imag, 0)
-        mu_r = mu.real
-        nu_r = nu.real
-        
-        if mu_is_real and nu_is_real:
-            if abs(mu_r - A[-1, -1]) < abs(nu_r - A[-1, -1]):
-                return mu_r
-            
-        return nu_r
-            
 
     if A.shape[0] != A.shape[1]:
         raise ValueError("Matrix must be square")
@@ -214,7 +200,10 @@ def eigen_values(
     n = A.shape[0]
     A = hessenberg_transform(A)
     for _ in range(max_iter):
-        shift = np.eye(n) * wilkinson_shift(A)
+        mu, nu = rank_two_eigen_pairs(A[-2:, -2:])[0]
+        c = mu.real if abs(A[-1, -1] - mu.real) < abs(A[-1, -1] - nu.real) else nu.real
+        shift = np.eye(n) * c
+        
         Q, R = qr_decomposition(A - shift)
         A = R @ Q + shift
     
@@ -223,7 +212,6 @@ def eigen_values(
     for i in range(n):
         if skip:
             skip = False
-            continue
         elif i == n - 1 or np.isclose(A[i + 1, i], 0.0):
             eigenvalues[i] = A[i, i]
         else:
@@ -231,8 +219,8 @@ def eigen_values(
             eigenvalues[i] = comp_eigs[0]
             eigenvalues[i+1] = comp_eigs[1]
             skip = True
-    
-    return np.array(eigenvalues, dtype=complex)
+
+    return eigenvalues
 
 
 def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
