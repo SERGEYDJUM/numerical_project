@@ -226,8 +226,7 @@ def playground() -> str:
     
 if __name__ == "__main__":
     tests = [T_det, T_hessenberg, T_qr_gauss, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
-    # tests = [playground, T_det, T_qr_gauss]
-    
+    # tests = [T_relay]
     
     for test in tests:
         if msg := test():

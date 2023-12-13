@@ -78,18 +78,16 @@ def closest_eigen_pair(
     n = A.shape[0]
     X = np.ones(n) if deterministic else randn(n)
     X /= norm(X)
-    Eye = np.eye(n)
-
+    
     lam, old_lam = approx_eigen, 0
     for _ in range(max_iter):
         try:
-            X = gauss_jordan(A - lam * Eye, X)
+            X = gauss_jordan(A - lam * np.eye(n), X)
+            X /= norm(X)
         except ValueError:
             return lam, X
 
-        X /= norm(X)
-
-        old_lam, lam = lam, X @ A @ X
+        old_lam, lam = lam, X.conj() @ (A @ X)
         if abs(old_lam - lam) < eps:
             break
 
@@ -114,12 +112,10 @@ def min_eigen_pair(
         (float, NDArray): Собственное значение и вектор.
     """
 
-    def guess():
-        return closest_eigen_pair(A, 0, max_iter, eps, deterministic=False)
-
-    guesses = [guess(), guess(), guess()]
-
-    return sorted(guesses, key=lambda x: abs(x[0]))[0]
+    guess_0 = closest_eigen_pair(A, 0, max_iter, eps, deterministic=False)
+    guess_1 = closest_eigen_pair(A, -guess_0[0]/2, max_iter, eps, deterministic=False)
+    
+    return sorted([guess_0, guess_1], key=lambda x: abs(x[0]))[0]
 
 
 def eigen_pairs_symmetric(
