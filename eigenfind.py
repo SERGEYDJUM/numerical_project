@@ -183,9 +183,8 @@ def eigen_values(
     A: Matrix, max_iter: int = 1024
 ) -> Vector:
     """Вычисляет комплексные собственные значения квадратной матрицы итеративно \
-        с помощью QR-разложения.
-
-        Примечание: низкая точность, медленная сходимость.
+        с помощью QR-разложения со сдвигом Вилкинсона.
+        
     Args:
         A (NDArray): Матрица.
         
@@ -194,43 +193,46 @@ def eigen_values(
     Returns:
         (NDArray): Массив собственных значений.
     """
+    
+    def wilkinson_shift(A: Matrix) -> float:
+        mu, nu = rank_two_eigen_pairs(A[-2:, -2:])[0]
+        mu_is_real = np.isclose(mu.imag, 0)
+        nu_is_real = np.isclose(nu.imag, 0)
+        mu_r = mu.real
+        nu_r = nu.real
+        
+        if mu_is_real and nu_is_real:
+            if abs(mu_r - A[-1, -1]) < abs(nu_r - A[-1, -1]):
+                return mu_r
+            
+        return nu_r
+            
 
     if A.shape[0] != A.shape[1]:
         raise ValueError("Matrix must be square")
 
-
     n = A.shape[0]
     A = hessenberg_transform(A)
-    # Q_k = np.eye(n)
     for _ in range(max_iter):
-        # shift = np.eye(n) * (A[-1, -1] * 0.99)  # Limit shift
-        # Q, R = qr_decomposition(A - shift)
-        Q, R = qr_decomposition(A)
-        # A = R @ Q + shift
-        A = R @ Q
-        # Q_k = Q_k @ Q
-
-        # if isclose(norm(np.tril(A, k=-1)), 0):
-        #     break
-
-    Lams = np.zeros(n, dtype=complex)
-
+        shift = np.eye(n) * wilkinson_shift(A)
+        Q, R = qr_decomposition(A - shift)
+        A = R @ Q + shift
+    
+    eigenvalues = np.zeros(n, dtype=complex)
     skip = False
-    for i in range(n - 1):
+    for i in range(n):
         if skip:
             skip = False
             continue
-
-        if np.isclose(A[i + 1, i], 0):
-            Lams[i] = A[i, i]
+        elif i == n - 1 or np.isclose(A[i + 1, i], 0.0):
+            eigenvalues[i] = A[i, i]
         else:
-            extralams = rank_two_eigen_pairs(A[i : i + 2, i : i + 2])[0]
-            Lams[[i, i + 1]] = extralams[[0, 1]]
+            comp_eigs = rank_two_eigen_pairs(A[i:i + 2, i:i + 2])[0]
+            eigenvalues[i] = comp_eigs[0]
+            eigenvalues[i+1] = comp_eigs[1]
             skip = True
-
-    if not skip:
-        Lams[-1] = A[-1, -1]
-    return Lams
+    
+    return np.array(eigenvalues, dtype=complex)
 
 
 def rank_two_eigen_pairs(A: Matrix) -> (Vector, Matrix):
