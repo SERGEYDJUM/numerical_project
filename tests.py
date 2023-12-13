@@ -7,6 +7,7 @@ from utils import matrix_is_singular, gauss_jordan, determinant, qr_decompositio
 from eigenfind import (
     eigen_values,
     eigen_pairs_symmetric,
+    eigen_values_real,
     max_eigen_pair,
     min_eigen_pair,
     rank_two_eigen_pairs,
@@ -140,26 +141,48 @@ def T_qr_iter() -> str:
                 # print(f"{true_lams=}", end="\n\n")
                 # print(f"{lams=}", end="\n\n")
                 # print(matrix)
-                return f"Failed qri check: {lam} != {true_lam}"
+                return f"Failed qr_iter_complex check: {lam} != {true_lam} on dim {matrix.shape[0]}"
+            
+            
+def T_qr_iter_realonly() -> str:
+    matricies = [get_symm_singular(r) for r in range(2, 32, 3)]
+    # matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
+
+    for i, matrix in enumerate(matricies):
+        true_lams = sorted(np.linalg.eig(matrix)[0], key=lambda x: (x.real, x.imag))
+        lams = sorted(eigen_values_real(matrix), key=lambda x: (x.real, x.imag))
+
+        for lam, true_lam in zip(lams, true_lams):
+            if norm(lam - true_lam) > 1e-2:
+                # print(f"{i=}", end="\n\n")
+                # print(f"{true_lams=}", end="\n\n")
+                # print(f"{lams=}", end="\n\n")
+                # print(matrix)
+                return f"Failed qr_iter_real check: {lam} != {true_lam} on dim {matrix.shape[0]}"
 
 
-def T_det_and_gj() -> str:
+def T_det() -> str:
+    matricies = [np.random.rand(r, r) for r in range(3, 128, 3)]
+
+    for i, A in enumerate(matricies):
+        if not isclose(np.linalg.det(A), determinant(A)):
+            return "Failed det check"
+
+
+def T_qr_gauss() -> str:
     matricies = filter(
         matrix_is_singular, [np.random.rand(r, r) for r in range(3, 128, 3)]
     )
 
     for i, A in enumerate(matricies):
         Y = np.ones(A.shape[0])
-
-        if not isclose(np.linalg.det(A), determinant(A)):
-            return "Failed det check"
-
+        
+        Q, R = qr_decomposition(A)
+        if not close(Q @ R, A, eps=1e-9):
+            return "Failed QR check"
+        
         if not close(np.linalg.solve(A, Y), gauss_jordan(A, Y)):
             return "Failed SLE solution check"
-
-        Q, R = qr_decomposition(A)
-        if not close(Q @ R, A):
-            return "Failed QR check"
 
 
 def playground() -> str:
@@ -190,9 +213,13 @@ def playground() -> str:
     print(f"Mismatched: {[x for x in lams if x not in matched]}")
     print("\n\n")
     
+    
+    
 
 if __name__ == "__main__":
-    tests = [playground, T_det_and_gj, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
+    tests = [T_det, T_qr_gauss, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter_realonly, T_qr_iter]
+    # tests = [playground, T_det, T_qr_gauss]
+    
     
     for test in tests:
         if msg := test():

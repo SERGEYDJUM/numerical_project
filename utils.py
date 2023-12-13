@@ -119,7 +119,32 @@ def gauss_jordan(A: Matrix, Y: Vector) -> Vector:
     return AY[:, -1]
 
 
-def qr_decomposition(A: Matrix) -> (Matrix, Matrix):
+def householder_reflection(U: Vector) -> Matrix:
+    """Строит значимую часть матрицы оператора \
+        отражения от плоскости с нормалью U.
+
+    Args:
+        U (Vector): Вектор, перпендикулярный плоскости.
+
+    Returns:
+        Matrix: Нижняя правая часть матрицы отражения.
+    """    
+    v = U / (U[0] + np.copysign(norm(U), U[0]))
+    v[0] = 1
+    v = v[:, np.newaxis]
+    H = np.eye(U.shape[0])
+    H -= (v @ v.T) / (v.T @ v) * 2
+    return H
+
+
+def hessenberg_matrix(A: Matrix) -> Matrix:
+    n = A.shape[0]
+    P = np.eye(n)
+    P[1:, 1:] = householder_reflection(A[1:, 1])
+    return P.T.conj @ A @ P
+
+
+def qr_decomposition(R: Matrix) -> (Matrix, Matrix):
     """Производит QR-разложение матрицы A с помощью преобразования Хаусхолдера.
 
     Args:
@@ -129,20 +154,14 @@ def qr_decomposition(A: Matrix) -> (Matrix, Matrix):
         (NDArray, NDArray): Q, R матрицы.
     """
 
-    n = A.shape[0]
-    R = A.copy()
+    n = R.shape[0]
+    R = R.copy()
     Q = np.eye(n)
 
     for i in range(n):
-        u = R[i:, i, np.newaxis]
-        v = u / (u[0] + norm(u) * np.sign(u[0]))
-        v[0] = 1
-
-        diff = (v @ v.T) * 2 / (v.T @ v)
         H = np.eye(n)
-        H[i:, i:] -= diff
-
+        H[i:, i:] = householder_reflection(R[i:, i])
+        Q = Q @ H
         R = H @ R
-        Q = H @ Q
 
-    return Q[:n].T, np.triu(R[:n])
+    return Q, np.triu(R)

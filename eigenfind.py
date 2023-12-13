@@ -180,17 +180,16 @@ def eigen_pairs_symmetric(
 
 
 def eigen_values(
-    A: Matrix, max_iter: int = 1024, eps: float = 1e-9, complex_mode: bool = False
+    A: Matrix, max_iter: int = 1024
 ) -> Vector:
-    """Вычисляет собственные значения квадратной матрицы итеративно \
+    """Вычисляет комплексные собственные значения квадратной матрицы итеративно \
         с помощью QR-разложения.
 
+        Примечание: низкая точность, медленная сходимость.
     Args:
         A (NDArray): Матрица.
         
         max_iter (int, optional): Ограничение по итерациям алгоритма.
-        
-        eps (float): Ограничение по точности, по достижении которй итерации прекращаются.
         
     Returns:
         (NDArray): Массив собственных значений.
@@ -198,7 +197,8 @@ def eigen_values(
 
     if A.shape[0] != A.shape[1]:
         raise ValueError("Matrix must be square")
-    
+
+
     n = A.shape[0]
     # Q_k = np.eye(n)
     for _ in range(max_iter):
@@ -209,8 +209,8 @@ def eigen_values(
         A = R @ Q
         # Q_k = Q_k @ Q
 
-        if isclose(norm(np.tril(A, k=-1)), 0):
-            break
+        # if isclose(norm(np.tril(A, k=-1)), 0):
+        #     break
 
     Lams = np.zeros(n, dtype=complex)
 
