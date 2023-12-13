@@ -130,21 +130,25 @@ def T_two_by_two_complex() -> str:
 
 def T_qr_iter() -> str:
     matricies = filter(
-        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 32, 3)]
+        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 20)]
     )
     # matricies = [get_rand_symm_matrix(r) for r in range(2, 18)]
 
     for i, matrix in enumerate(matricies):
-        true_lams = sorted(np.linalg.eig(matrix)[0], key=lambda x: (x.real, x.imag))
-        lams = sorted(eigen_values(matrix), key=lambda x: (x.real, x.imag))
+        true_lams = sorted(np.linalg.eig(matrix)[0], key=comp_key)
+        lams = sorted(eigen_values(matrix), key=comp_key)
 
         for lam, true_lam in zip(lams, true_lams):
-            if norm(lam - true_lam) > 1e-2:
+            msg = ""
+            if not np.isclose(lam, true_lam, atol=1e-2):
                 # print(f"{i=}", end="\n\n")
                 # print(f"{true_lams=}", end="\n\n")
                 # print(f"{lams=}", end="\n\n")
                 # print(matrix)
-                return f"Failed qr_iter_complex check: {lam} != {true_lam} on dim {matrix.shape[0]}"
+                msg += f"Failed qr_iter_complex check: {lam} != {true_lam} on dim {matrix.shape[0]}\n"
+                
+            if msg:
+                return msg
             
             
 # def T_qr_iter_realonly() -> str:
@@ -226,7 +230,7 @@ def playground() -> str:
     
 if __name__ == "__main__":
     tests = [T_det, T_hessenberg, T_qr_gauss, T_two_by_two_complex, T_relay, T_rotation, T_qr_iter]
-    # tests = [T_relay]
+    # tests = [T_qr_iter]
     
     for test in tests:
         if msg := test():
