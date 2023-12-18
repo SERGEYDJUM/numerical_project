@@ -178,7 +178,7 @@ def eigen_pairs_symmetric(
 
 
 def eigen_values(
-    A: Matrix, max_iter: int = 1024
+    A: Matrix, max_iter: int = 1024, eps: float = 1e-12
 ) -> Vector:
     """Вычисляет комплексные собственные значения квадратной матрицы итеративно \
         с помощью QR-разложения со сдвигом Вилкинсона.
@@ -197,13 +197,17 @@ def eigen_values(
 
     n = A.shape[0]
     A = hessenberg_transform(A)
+    old_A = np.eye(n)
     for _ in range(max_iter):
         mu, nu = rank_two_eigen_pairs(A[-2:, -2:])[0]
         c = mu.real if abs(A[-1, -1] - mu.real) < abs(A[-1, -1] - nu.real) else nu.real
         shift = np.eye(n) * c
         
         Q, R = qr_decomposition(A - shift)
-        A = R @ Q + shift
+        old_A, A = A, R @ Q + shift
+        
+        if norm(old_A - A) < eps:
+            break
     
     eigenvalues = np.zeros(n, dtype=complex)
     skip = False

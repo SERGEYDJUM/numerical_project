@@ -51,7 +51,7 @@ def get_symm_singular(r: int) -> Matrix:
 def T_relay() -> str:
     # Проверка метода Рэлея и степенных итераций
     matricies = filter(
-        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 28, 1)]
+        matrix_is_singular, [np.random.rand(r, r) for r in range(2, 100, 1)]
     )
 
     for i, A in enumerate(matricies):
@@ -145,7 +145,7 @@ def T_qr_iter() -> str:
                 # print(f"{true_lams=}", end="\n\n")
                 # print(f"{lams=}", end="\n\n")
                 # print(matrix)
-                msg += f"Failed qr_iter_complex check: {lam} != {true_lam} on dim {matrix.shape[0]}\n"
+                msg += f"Failed qr_iter_complex check: {lam} != {true_lam} on dim {matrix.shape[0]}, test {i}\n"
                 
             if msg:
                 return msg
