@@ -41,7 +41,7 @@ def max_eigen_pair(
     lam, lam_new = float("-inf"), float("inf")
     for _ in range(max_iter):
         X_new = A @ X
-        lam, lam_new = lam_new, (X @ X_new) / (X @ X)
+        lam, lam_new = lam_new, (X @ X_new)
         X = X_new / norm(X_new)
 
         if abs(lam - lam_new) < eps:
